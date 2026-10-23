@@ -21,7 +21,7 @@ app.use(helmet());
 
 // CORS configuration
 app.use(cors({
-  origin: "https://repair-hub-ynz6.vercel.app",
+  origin: "https://repair-hub-l2pc.vercel.app",
   credentials: true,
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"]
