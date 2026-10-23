@@ -10,14 +10,9 @@ for (const key of ["MONGO_URI", "JWT_SECRET", "FRONTEND_URL"])
   if (!process.env[key]) throw new Error(`Missing ${key}`);
 const app = express();
 app.use(helmet());
-
-app.use(cors({
-  origin: "https://repair-hub-45zn-zaruu.vercel.app/",
-  credentials: true,
-  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"]
-}));
-
+app.use(
+  cors(),
+);
 app.use(express.json({ limit: "100kb" }));
 app.use(cookieParser());
 app.use("/api/auth", rateLimit({ windowMs: 15 * 60 * 1000, limit: 30 }));
