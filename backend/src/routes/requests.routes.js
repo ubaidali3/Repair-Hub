@@ -1,0 +1,12 @@
+import {Router} from 'express';
+import {z} from 'zod';
+import {RepairRequest} from '../models/index.js';
+import {auth,roles} from '../middleware/auth.js';
+import {validate,error,okId,fail,allowedImage} from '../utils/helpers.js';
+const r=Router();
+r.get('/requests',async(req,res)=>res.json({items:await RepairRequest.find({status:'open'}).select('-acceptedBid').sort({createdAt:-1}).limit(50)}));
+r.post('/requests',auth,roles('customer'),async(req,res)=>{try{const d=validate(z.object({title:z.string().min(5).max(150),description:z.string().min(15).max(3000),category:z.string().min(2),city:z.string().min(2),area:z.string().min(2),images:z.array(z.string().url()).max(5).optional()}),req);res.status(201).json({item:await RepairRequest.create({...d,customer:req.user.id})})}catch(e){error(res,e)}});
+r.get('/requests/mine',auth,roles('customer'),async(req,res)=>res.json({items:await RepairRequest.find({customer:req.user.id}).sort({createdAt:-1})}));
+r.patch('/requests/:id',auth,roles('customer'),async(req,res)=>{try{if(!okId(req.params.id))throw Error('Invalid ID');const allowed=['title','description','category','city','area','images'];const update=Object.fromEntries(Object.entries(req.body).filter(([k])=>allowed.includes(k)));if(!Object.keys(update).length)throw Error('No changes');for(const k of allowed.filter(x=>x!=='images'))if(update[k]!==undefined&&(typeof update[k]!=='string'||update[k].trim().length<2||update[k].length>3000))throw Error('Invalid '+k);if(update.images!==undefined&&(!Array.isArray(update.images)||update.images.length>5||!update.images.every(allowedImage)))throw Error('Invalid images');const item=await RepairRequest.findOneAndUpdate({_id:req.params.id,customer:req.user.id,status:'open'},{$set:update},{new:true,runValidators:true});res.status(item?200:409).json(item?{item}:{error:'Only open requests can be edited'})}catch(e){fail(res,e)}});
+r.delete('/requests/:id',auth,roles('customer'),async(req,res)=>{if(!okId(req.params.id))return res.status(400).json({error:'Invalid ID'});const item=await RepairRequest.findOneAndUpdate({_id:req.params.id,customer:req.user.id,status:'open'},{$set:{status:'cancelled'}},{new:true});res.status(item?200:409).json(item?{item}:{error:'Only open requests can be cancelled'})});
+export default r;

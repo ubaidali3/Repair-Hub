@@ -1,0 +1,11 @@
+import {Router} from 'express';
+import {z} from 'zod';
+import {Booking,Conversation,Message} from '../models/index.js';
+import {auth} from '../middleware/auth.js';
+import {valid,bad,participant,notify} from '../utils/helpers.js';
+const r=Router();
+r.get('/conversations',auth,async(req,res)=>res.json({items:await Conversation.find({$or:[{customer:req.user.id},{technician:req.user.id}]}).populate('booking','category status').sort({updatedAt:-1})}));
+r.post('/bookings/:id/conversation',auth,async(req,res)=>{if(!valid(req.params.id))return res.status(400).json({error:'Invalid ID'});const b=await Booking.findById(req.params.id);if(!participant(b,req.user)||!['confirmed','in_progress','awaiting_confirmation','completed'].includes(b.status))return res.status(403).json({error:'Conversation unavailable'});const item=await Conversation.findOneAndUpdate({booking:b.id},{$setOnInsert:{customer:b.customer,technician:b.technician}},{upsert:true,new:true});res.json({item})});
+r.get('/conversations/:id/messages',auth,async(req,res)=>{const c=valid(req.params.id)&&await Conversation.findById(req.params.id);if(!c||!(String(c.customer)===req.user.id||String(c.technician)===req.user.id))return res.status(403).json({error:'Forbidden'});res.json({items:await Message.find({conversation:c.id}).sort({createdAt:1}).limit(300)})});
+r.post('/conversations/:id/messages',auth,async(req,res)=>{try{const {text}=z.object({text:z.string().trim().min(1).max(2000)}).parse(req.body);const c=valid(req.params.id)&&await Conversation.findById(req.params.id);if(!c||!(String(c.customer)===req.user.id||String(c.technician)===req.user.id))return res.status(403).json({error:'Forbidden'});const item=await Message.create({conversation:c.id,sender:req.user.id,text});await notify(String(c.customer)===req.user.id?c.technician:c.customer,'New message');res.status(201).json({item})}catch(e){bad(res,e)}});
+export default r;

@@ -1,0 +1,12 @@
+import {Router} from 'express';
+import {z} from 'zod';
+import {User,Booking,WarrantyClaim,Dispute,AdminAuditLog} from '../models/index.js';
+import {auth,roles} from '../middleware/auth.js';
+import {bad,notify} from '../utils/helpers.js';
+const r=Router();
+r.get('/admin/technicians',auth,roles('admin'),async(req,res)=>res.json({items:await User.find({role:'technician'}).select('name email verification city skills suspended').limit(200)}));
+r.patch('/admin/technicians/:id/verification',auth,roles('admin'),async(req,res)=>{try{const {verification}=z.object({verification:z.enum(['approved','rejected','pending'])}).parse(req.body);const item=await User.findOneAndUpdate({_id:req.params.id,role:'technician'},{verification},{new:true}).select('name verification');if(!item)return res.status(404).json({error:'Technician not found'});await AdminAuditLog.create({admin:req.user.id,action:'technician.verification',target:item.id,details:verification});await notify(item.id,`Verification: ${verification}`);res.json({item})}catch(e){bad(res,e)}});
+r.get('/admin/stats',auth,roles('admin'),async(req,res)=>res.json({users:await User.countDocuments(),techniciansPending:await User.countDocuments({role:'technician',verification:'pending'}),bookings:await Booking.countDocuments(),claims:await WarrantyClaim.countDocuments()}));
+r.get('/admin/audit',auth,roles('admin'),async(req,res)=>res.json({items:await AdminAuditLog.find().sort({createdAt:-1}).limit(100)}));
+r.get('/admin/disputes',auth,roles('admin'),async(req,res)=>res.json({items:await Dispute.find().sort({createdAt:-1}).limit(100)}));
+export default r;
