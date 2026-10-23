@@ -12,7 +12,7 @@ const app = express();
 app.use(helmet());
 
 app.use(cors({
-  origin: "https://repair-hub-od6c.vercel.app",
+  origin: "https://repair-hub-45zn-zaruu.vercel.app/",
   credentials: true,
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"]
