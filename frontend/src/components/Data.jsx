@@ -6,7 +6,7 @@ import {
   Wifi,
   LoaderCircle,
 } from "lucide-react";
-import { api } from "../lib/api.js";
+import api from "../lib/api.js";
 import { message } from "../lib/helpers.js";
 
 export default function Data({ url, children, refresh = 0 }) {
